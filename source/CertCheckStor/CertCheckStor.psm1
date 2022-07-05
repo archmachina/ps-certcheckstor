@@ -353,7 +353,7 @@ Function Get-CertCheckStorEndpoint
         [ValidateNotNull()]
         $Table,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern("^[0-9a-zA-Z_-]+$")]
         [string]$Perspective
