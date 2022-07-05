@@ -7,38 +7,6 @@ $ErrorActionPreference = "Stop"
 $InformationPreference = "Continue"
 Set-StrictMode -Version 2
 
-class CertCheckStorCertificate
-{
-
-}
-
-class CertCheckStorUsage
-{
-
-}
-
-<#
-#>
-Function New-NormalisedUri
-{
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
-    [CmdletBinding()]
-    [OutputType([System.Uri])]
-    param(
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNull()]
-        $Obj
-    )
-
-    process
-    {
-        $tempUri = [Uri](([Uri]$Obj).AbsoluteUri.ToLower())
-        $uri = [Uri]::New(("{0}://{1}:{2}" -f $tempUri.Scheme, $tempUri.Host, $tempUri.Port))
-
-        $uri
-    }
-}
-
 <#
 #>
 Function Add-CertCheckStorCertificate
@@ -47,7 +15,7 @@ Function Add-CertCheckStorCertificate
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        [Microsoft.Azure.Cosmos.Table.CloudTable]$Table,
+        $Table,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -158,7 +126,7 @@ Function Add-CertCheckStorUsage
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        [Microsoft.Azure.Cosmos.Table.CloudTable]$Table,
+        $Table,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -259,7 +227,7 @@ Function Add-CertCheckStorEndpoint
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        [Microsoft.Azure.Cosmos.Table.CloudTable]$Table,
+        $Table,
 
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
