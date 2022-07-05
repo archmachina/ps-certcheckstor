@@ -399,9 +399,11 @@ Function Get-CertCheckStorEndpoint
                     Connection = $connectionUri
                     Sni = (Get-MemberValue -Obj $obj -Property Sni -Default $connectionUri.Host)
                     Thumbprint = (Get-MemberValue -Obj $obj -Property Thumbprint -Default "")
+                    Perspective = $obj.PartitionKey
                     Connected = [bool](Get-MemberValue -Obj $obj -Property Connected -Default $false)
                     Addresses = [string](Get-MemberValue -Obj $obj -Property Addresses -Default "")
                     LocallyTrusted = [bool](Get-MemberValue -Obj $obj -Property LocallyTrusted -Default $false)
+                    Modified = [DateTime]::Parse($obj.TableTimestamp)
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
