@@ -31,6 +31,39 @@ Function New-NormalisedUri
 
 <#
 #>
+Function Get-MemberValue
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNull()]
+        $Obj,
+
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Property,
+
+        [Parameter(Mandatory=$false)]
+        [AllowNull()]
+        $Default
+    )
+
+    process
+    {
+        if (($Obj | Get-Member).Name -contains $Property)
+        {
+            $Obj.$Property
+        } elseif ($PSBoundParameters.Keys -contains "Default")
+        {
+            $Default
+        } else {
+            Write-Error "Property ($Property) not found and no default value"
+        }
+    }
+}
+
+<#
+#>
 Function Add-CertCheckStorCertificate
 {
     [CmdletBinding()]
@@ -56,11 +89,11 @@ Function Add-CertCheckStorCertificate
         [string]$Issuer,
 
         [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNull()]
         [DateTime]$NotBefore,
 
         [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNull()]
         [DateTime]$NotAfter
     )
 
@@ -150,7 +183,7 @@ Function Add-CertCheckStorUsage
         [ValidateNotNull()]
         $Table,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern("^[0-9a-zA-Z_-]+$")]
         [string]$UsageType,
@@ -257,28 +290,30 @@ Function Add-CertCheckStorEndpoint
         [string]$Perspective,
 
         [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNull()]
         [Uri]$Connection,
 
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]$Sni,
 
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Thumbprint,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNull()]
+        [AllowEmptyString()]
+        [string]$Thumbprint = "",
 
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [bool]$Connected,
 
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Addresses,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNull()]
+        [AllowEmptyString()]
+        [string]$Addresses = "",
 
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [bool]$LocallyTrusted
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNull()]
+        [bool]$LocallyTrusted = $false
     )
 
     process
@@ -344,13 +379,29 @@ Function Get-CertCheckStorEndpoint
             $obj = $_
 
             try {
+                $connection = Get-MemberValue -Obj $obj -Property Connection -Default ""
+
+                # Check for no content in 'Connection' and try 'Uri' instead
+                if ([string]::IsNullOrEmpty($connection))
+                {
+                    $connection = Get-MemberValue -Obj $obj -Property Uri -Default ""
+                }
+
+                # Check if we had any success with the connection
+                if ([string]::IsNullOrEmpty($connection))
+                {
+                    Write-Error "Connection info could not be found"
+                }
+
+                $connectionUri = [Uri]::New($connection)
+
                 [PSCustomObject]@{
-                    Connection = [Uri]::New($obj.Connection)
-                    Sni = $obj.Sni
-                    Thumbprint = $obj.Thumbprint
-                    Connected = $obj.Connected
-                    Addresses = $Addresses
-                    LocallyTrusted = [bool]$LocallyTrusted
+                    Connection = $connectionUri
+                    Sni = (Get-MemberValue -Obj $obj -Property Sni -Default $connectionUri.Host)
+                    Thumbprint = (Get-MemberValue -Obj $obj -Property Thumbprint -Default "")
+                    Connected = [bool](Get-MemberValue -Obj $obj -Property Connected -Default $false)
+                    Addresses = [string](Get-MemberValue -Obj $obj -Property Addresses -Default "")
+                    LocallyTrusted = [bool](Get-MemberValue -Obj $obj -Property LocallyTrusted -Default $false)
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
