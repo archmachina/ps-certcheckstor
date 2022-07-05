@@ -9,6 +9,28 @@ Set-StrictMode -Version 2
 
 <#
 #>
+Function New-NormalisedUri
+{
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
+    [CmdletBinding()]
+    [OutputType([System.Uri])]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNull()]
+        $Obj
+    )
+
+    process
+    {
+        $tempUri = [Uri](([Uri]$Obj).AbsoluteUri.ToLower())
+        $uri = [Uri]::New(("{0}://{1}:{2}" -f $tempUri.Scheme, $tempUri.Host, $tempUri.Port))
+
+        $uri
+    }
+}
+
+<#
+#>
 Function Add-CertCheckStorCertificate
 {
     [CmdletBinding()]
@@ -271,7 +293,7 @@ Function Add-CertCheckStorEndpoint
             PartitionKey = $Perspective
             RowKey = $rowKey
             Property = @{
-                Connection = $Connection
+                Connection = (New-NormalisedUri $Connection).AbsoluteUri
                 Sni = $Sni
                 Thumbprint = $Thumbprint
                 Connected = $Connected
