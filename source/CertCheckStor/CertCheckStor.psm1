@@ -164,6 +164,7 @@ Function Get-CertCheckStorCertificate
                     Issuer = $obj.Issuer
                     NotBefore = [DateTime]::Parse($obj.NotBefore)
                     NotAfter = [DateTime]::Parse($obj.NotAfter)
+                    Modified = [DateTime]::Parse($obj.TableTimestamp)
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
@@ -263,8 +264,10 @@ Function Get-CertCheckStorUsage
             try {
                 [PSCustomObject]@{
                     Thumbprint = $obj.Thumbprint
+                    UsageType = $obj.PartitionKey
                     UsedBy = $obj.UsedBy
                     Seen = [DateTime]::Parse($obj.Seen)
+                    Modified = [DateTime]::Parse($obj.TableTimestamp)
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
