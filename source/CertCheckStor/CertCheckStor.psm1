@@ -107,8 +107,8 @@ Function Add-CertCheckStorCertificate
                 Thumbprint = $Thumbprint
                 Subject = $Subject
                 Issuer = $Issuer
-                NotBefore = $NotBefore.ToString("o")
-                NotAfter = $NotAfter.ToString("o")
+                NotBefore = $NotBefore.ToUniversalTime().ToString("o")
+                NotAfter = $NotAfter.ToUniversalTime().ToString("o")
             }
             UpdateExisting = $true
         }
@@ -162,9 +162,9 @@ Function Get-CertCheckStorCertificate
                     Thumbprint = $obj.Thumbprint
                     Subject = $obj.Subject
                     Issuer = $obj.Issuer
-                    NotBefore = [DateTime]::Parse($obj.NotBefore)
-                    NotAfter = [DateTime]::Parse($obj.NotAfter)
-                    Modified = [DateTime]::Parse($obj.TableTimestamp)
+                    NotBefore = [DateTime]::Parse($obj.NotBefore).ToUniversalTime()
+                    NotAfter = [DateTime]::Parse($obj.NotAfter).ToUniversalTime()
+                    Modified = [DateTime]::Parse($obj.TableTimestamp).ToUniversalTime()
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
@@ -266,8 +266,8 @@ Function Get-CertCheckStorUsage
                     Thumbprint = $obj.Thumbprint
                     UsageType = $obj.PartitionKey
                     UsedBy = $obj.UsedBy
-                    Seen = [DateTime]::Parse($obj.Seen)
-                    Modified = [DateTime]::Parse($obj.TableTimestamp)
+                    Seen = [DateTime]::Parse($obj.Seen).ToUniversalTime()
+                    Modified = [DateTime]::Parse($obj.TableTimestamp).ToUniversalTime()
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
@@ -406,7 +406,7 @@ Function Get-CertCheckStorEndpoint
                     Connected = [bool](Get-MemberValue -Obj $obj -Property Connected -Default $false)
                     Addresses = [string](Get-MemberValue -Obj $obj -Property Addresses -Default "")
                     LocallyTrusted = [bool](Get-MemberValue -Obj $obj -Property LocallyTrusted -Default $false)
-                    Modified = [DateTime]::Parse($obj.TableTimestamp)
+                    Modified = [DateTime]::Parse($obj.TableTimestamp).ToUniversalTime()
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
