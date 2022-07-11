@@ -164,7 +164,8 @@ Function Get-CertCheckStorCertificate
                     Issuer = $obj.Issuer
                     NotBefore = [DateTime]::Parse($obj.NotBefore).ToUniversalTime()
                     NotAfter = [DateTime]::Parse($obj.NotAfter).ToUniversalTime()
-                    Modified = [DateTime]::Parse($obj.TableTimestamp).ToUniversalTime()
+                    # TableTimestamp is a DateTimeOffset
+                    Modified = $obj.TableTimestamp.DateTime.ToUniversalTime()
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
@@ -267,7 +268,8 @@ Function Get-CertCheckStorUsage
                     UsageType = $obj.PartitionKey
                     UsedBy = $obj.UsedBy
                     Seen = [DateTime]::Parse($obj.Seen).ToUniversalTime()
-                    Modified = [DateTime]::Parse($obj.TableTimestamp).ToUniversalTime()
+                    # TableTimestamp is a DateTimeOffset
+                    Modified = $obj.TableTimestamp.DateTime.ToUniversalTime()
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
@@ -406,7 +408,8 @@ Function Get-CertCheckStorEndpoint
                     Connected = [bool](Get-MemberValue -Obj $obj -Property Connected -Default $false)
                     Addresses = [string](Get-MemberValue -Obj $obj -Property Addresses -Default "")
                     LocallyTrusted = [bool](Get-MemberValue -Obj $obj -Property LocallyTrusted -Default $false)
-                    Modified = [DateTime]::Parse($obj.TableTimestamp).ToUniversalTime()
+                    # TableTimestamp is a DateTimeOffset
+                    Modified = $obj.TableTimestamp.DateTime.ToUniversalTime()
                 }
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
