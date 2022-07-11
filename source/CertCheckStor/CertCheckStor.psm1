@@ -81,11 +81,13 @@ Function Add-CertCheckStorCertificate
         [string]$Thumbprint,
 
         [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNull()]
+        [AllowEmptyString()]
         [string]$Subject,
 
         [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNull()]
+        [AllowEmptyString()]
         [string]$Issuer,
 
         [Parameter(Mandatory=$true)]
