@@ -13,19 +13,55 @@ Function New-NormalisedUri
 {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
     [CmdletBinding()]
-    [OutputType([System.Uri])]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        $Obj
+        $UriObj,
+
+        [Parameter(Mandatory=$false)]
+        [switch]$AsString = $false
     )
 
     process
     {
-        $tempUri = [Uri](([Uri]$Obj).AbsoluteUri.ToLower())
+        # If it's not a URI, attempt to convert to Uri directly
+        $uri = $UriObj
+        if ($uri.GetType().FullName -ne "System.Uri")
+        {
+            try {
+                $uri = [Uri]::New($uri)
+            } catch {
+                Write-Verbose "Input could not be converted to Uri directly"
+            }
+        }
+
+        # If it's still not a URI, attempt to convert to Uri with a https:// prefix
+        if ($uri.GetType().FullName -ne "System.Uri")
+        {
+            try {
+                $uri = [Uri]::New("https://" + $uri)
+            } catch {
+                Write-Verbose "Input could not be converted to Uri with https scheme prefix"
+            }
+        }
+
+        # If it's still not a URI, then fail the normalisation
+        if ($uri.GetType().FullName -ne "System.Uri")
+        {
+            Write-Error "Failed to convert object to uri"
+        }
+
+        # Ensure the URI is lowercase and the path is absent
+        $tempUri = [Uri]::New($uri.AbsoluteUri.ToLower())
         $uri = [Uri]::New(("{0}://{1}:{2}" -f $tempUri.Scheme, $tempUri.Host, $tempUri.Port))
 
-        $uri
+        # Pass the Uri on
+        if ($AsString)
+        {
+            $uri.ToString()
+        } else {
+            $uri
+        }
     }
 }
 
