@@ -31,7 +31,7 @@ Function New-NormalisedUri
             try {
                 $uri = [Uri]::New($uri)
             } catch {
-                Write-Verbose "Input could not be converted to Uri directly"
+                # Could not convert to Uri directly
             }
         }
 
@@ -41,14 +41,14 @@ Function New-NormalisedUri
             try {
                 $uri = [Uri]::New("https://" + $uri)
             } catch {
-                Write-Verbose "Input could not be converted to Uri with https scheme prefix"
+                # Could not convert with https:// prefix
             }
         }
 
         # If it's still not a URI, then fail the normalisation
         if ($uri.GetType().FullName -ne "System.Uri")
         {
-            Write-Error "Failed to convert object to uri"
+            Write-Error ("Failed to convert object to uri directly or with https:// prefix: {0}" -f $uri)
         }
 
         # Ensure the URI is lowercase and the path is absent
