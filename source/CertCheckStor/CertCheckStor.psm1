@@ -7,6 +7,11 @@ $ErrorActionPreference = "Stop"
 $InformationPreference = "Continue"
 Set-StrictMode -Version 2
 
+########
+# Script Vars
+$script:SessionId = [Guid]::NewGuid()
+$script:SessionName = ""
+
 <#
 #>
 Function New-NormalisedUri
@@ -95,6 +100,62 @@ Function Get-MemberValue
         } else {
             Write-Error "Property ($Property) not found and no default value"
         }
+    }
+}
+
+<#
+#>
+Function Reset-CertCheckStorSessionId
+{
+    [CmdletBinding()]
+    param()
+
+    process
+    {
+        $script:SessionId = [Guid]::NewGuid()
+    }
+}
+
+<#
+#>
+Function Get-CertCheckStorSessionId
+{
+    [CmdletBinding()]
+    param()
+
+    process
+    {
+        $script:SessionId
+    }
+}
+
+<#
+#>
+Function Get-CertCheckStorSessionName
+{
+    [CmdletBinding()]
+    param()
+
+    process
+    {
+        $script:SessionName
+    }
+}
+
+<#
+#>
+Function Set-CertCheckStorSessionName
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Name
+    )
+
+    process
+    {
+        $script:SessionName = $Name
     }
 }
 
@@ -243,6 +304,12 @@ Function Add-CertCheckStorUsage
         $rowKey = "{0}:{1}" -f $Thumbprint, $UsedBy
         $rowkey = [System.Convert]::ToBase64String([System.Text.Encoding]::Default.GetBytes($rowKey))
 
+        # Make sure we have a valid session name set
+        if ([string]::IsNullOrEmpty($script:SessionName))
+        {
+            Write-Error "SessionName not set"
+        }
+
         # Generate parameters for Add-AzTableRow call
         $tableArgs = @{
             Table = $Table
@@ -252,6 +319,8 @@ Function Add-CertCheckStorUsage
                 Thumbprint = $Thumbprint
                 UsedBy = $UsedBy
                 Seen = ([DateTime]::UtcNow.ToString("o"))
+                SessionId = $script:SessionId
+                SessionName = $script:SessionName
             }
             UpdateExisting = $true
         }
@@ -306,6 +375,8 @@ Function Get-CertCheckStorUsage
                     UsageType = $obj.PartitionKey
                     UsedBy = $obj.UsedBy
                     Seen = [DateTime]::Parse($obj.Seen).ToUniversalTime()
+                    SessionId = $obj.SessionId
+                    SessionName = $obj.SessionName
                     # TableTimestamp is a DateTimeOffset
                     Modified = $obj.TableTimestamp.DateTime.ToUniversalTime()
                 }
@@ -314,6 +385,37 @@ Function Get-CertCheckStorUsage
                 Write-Warning ("Entry: " + ($obj | ConvertTo-Json))
             }
         }
+    }
+}
+
+<#
+#>
+Function Remove-CertCheckStorStaleUsage
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNull()]
+        $Table
+    )
+
+    process
+    {
+        # Make sure we have a valid session name set
+        if ([string]::IsNullOrEmpty($script:SessionName))
+        {
+            Write-Error "SessionName not set"
+        }
+
+        $tableArgs = @{
+            Table = $Table
+        }
+
+        # Retrieve the objects
+        $removeCount = 0
+        $result = Get-AzTableRow @tableArgs | Where-Object {
+            $_.SessionName -eq $script:SessionName -and $_.SessionId -ne $script:SessionId
+        } | ForEach-Object { $removeCount++ } | Remove-AzTableRow
     }
 }
 
