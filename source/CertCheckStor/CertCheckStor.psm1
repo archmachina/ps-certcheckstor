@@ -440,9 +440,11 @@ Function Remove-CertCheckStorStaleUsage
             } catch {}
         } | ForEach-Object {
             $removeCount++
-            $_ | Remove-AzTableRow | Out-Null
+            Remove-AzTableRow -Table $Table -Entity $_ | Out-Null
             $_
         }
+
+        Write-Verbose "Removed $removeCount usages"
     }
 }
 
