@@ -7,6 +7,11 @@ $ErrorActionPreference = "Stop"
 $InformationPreference = "Continue"
 Set-StrictMode -Version 2
 
+########
+# Script Vars
+$script:SessionId = [Guid]::NewGuid()
+$script:SessionName = ""
+
 <#
 #>
 Function New-NormalisedUri
@@ -95,6 +100,62 @@ Function Get-MemberValue
         } else {
             Write-Error "Property ($Property) not found and no default value"
         }
+    }
+}
+
+<#
+#>
+Function Reset-CertCheckStorSessionId
+{
+    [CmdletBinding()]
+    param()
+
+    process
+    {
+        $script:SessionId = [Guid]::NewGuid()
+    }
+}
+
+<#
+#>
+Function Get-CertCheckStorSessionId
+{
+    [CmdletBinding()]
+    param()
+
+    process
+    {
+        $script:SessionId
+    }
+}
+
+<#
+#>
+Function Get-CertCheckStorSessionName
+{
+    [CmdletBinding()]
+    param()
+
+    process
+    {
+        $script:SessionName
+    }
+}
+
+<#
+#>
+Function Set-CertCheckStorSessionName
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Name
+    )
+
+    process
+    {
+        $script:SessionName = $Name
     }
 }
 
@@ -243,6 +304,12 @@ Function Add-CertCheckStorUsage
         $rowKey = "{0}:{1}" -f $Thumbprint, $UsedBy
         $rowkey = [System.Convert]::ToBase64String([System.Text.Encoding]::Default.GetBytes($rowKey))
 
+        # Make sure we have a valid session name set
+        if ([string]::IsNullOrEmpty($script:SessionName))
+        {
+            Write-Error "SessionName not set"
+        }
+
         # Generate parameters for Add-AzTableRow call
         $tableArgs = @{
             Table = $Table
@@ -252,6 +319,8 @@ Function Add-CertCheckStorUsage
                 Thumbprint = $Thumbprint
                 UsedBy = $UsedBy
                 Seen = ([DateTime]::UtcNow.ToString("o"))
+                SessionId = $script:SessionId
+                SessionName = $script:SessionName
             }
             UpdateExisting = $true
         }
@@ -274,11 +343,7 @@ Function Get-CertCheckStorUsage
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern("^[0-9a-zA-Z_-]+$")]
-        [string]$UsageType = "",
-
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Thumbprint = ""
+        [string]$UsageType = ""
     )
 
     process
@@ -301,19 +366,80 @@ Function Get-CertCheckStorUsage
             $obj = $_
 
             try {
-                [PSCustomObject]@{
+                $usage = @{
                     Thumbprint = $obj.Thumbprint
                     UsageType = $obj.PartitionKey
                     UsedBy = $obj.UsedBy
                     Seen = [DateTime]::Parse($obj.Seen).ToUniversalTime()
+                    SessionId = ""
+                    SessionName = ""
                     # TableTimestamp is a DateTimeOffset
                     Modified = $obj.TableTimestamp.DateTime.ToUniversalTime()
                 }
+
+                # Attempt to extract optional properties
+                try {
+                    $usage["SessionName"] = $obj.SessionName
+                    $usage["SessionId"] = $obj.SessionId
+                } catch {
+                    # Object is missing some of the optional properties
+                    # Fail silently on this
+                }
+
+                [PSCustomObject]$usage
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
                 Write-Warning ("Entry: " + ($obj | ConvertTo-Json))
             }
         }
+    }
+}
+
+<#
+#>
+Function Remove-CertCheckStorStaleUsage
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNull()]
+        $Table,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern("^[0-9a-zA-Z_-]+$")]
+        [string]$UsageType = ""
+    )
+
+    process
+    {
+        # Make sure we have a valid session name set
+        if ([string]::IsNullOrEmpty($script:SessionName))
+        {
+            Write-Error "SessionName not set"
+        }
+
+        $tableArgs = @{
+            Table = $Table
+        }
+
+        # Retrieve a particular usage type, if specified
+        if (![string]::IsNullOrEmpty($UsageType))
+        {
+            $tableArgs["PartitionKey"] = $UsageType
+        }
+
+        # Retrieve the objects
+        $removeCount = 0
+        Get-AzTableRow @tableArgs | ForEach-Object {
+            try {
+                if ($_.SessionName -eq $script:SessionName -and $_.SessionId -ne $script:SessionId)
+                {
+                    $removeCount++
+                    $_
+                }
+            } catch {}
+        } | Remove-AzTableRow | Out-Null
     }
 }
 
