@@ -431,9 +431,15 @@ Function Remove-CertCheckStorStaleUsage
 
         # Retrieve the objects
         $removeCount = 0
-        Get-AzTableRow @tableArgs | Where-Object {
-            $_.SessionName -eq $script:SessionName -and $_.SessionId -ne $script:SessionId
-        } | ForEach-Object { $removeCount++ } | Remove-AzTableRow | Out-Null
+        Get-AzTableRow @tableArgs | ForEach-Object {
+            try {
+                if ($_.SessionName -eq $script:SessionName -and $_.SessionId -ne $script:SessionId)
+                {
+                    $removeCount++
+                    $_
+                }
+            } catch {}
+        } | Remove-AzTableRow | Out-Null
     }
 }
 
