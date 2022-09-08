@@ -75,7 +75,12 @@
         'Add-CertCheckStorUsage',
         'Get-CertCheckStorCertificate',
         'Get-CertCheckStorEndpoint',
-        'Get-CertCheckStorUsage'
+        'Get-CertCheckStorUsage',
+        'Reset-CertCheckStorSessionId',
+        'Get-CertCheckStorSessionId',
+        'Get-CertCheckStorSessionName',
+        'Set-CertCheckStorSessionName',
+        'Remove-CertCheckStorStaleUsage'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
