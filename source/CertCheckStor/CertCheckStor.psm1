@@ -343,11 +343,7 @@ Function Get-CertCheckStorUsage
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern("^[0-9a-zA-Z_-]+$")]
-        [string]$UsageType = "",
-
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Thumbprint = ""
+        [string]$UsageType = ""
     )
 
     process
@@ -370,16 +366,27 @@ Function Get-CertCheckStorUsage
             $obj = $_
 
             try {
-                [PSCustomObject]@{
+                $usage = @{
                     Thumbprint = $obj.Thumbprint
                     UsageType = $obj.PartitionKey
                     UsedBy = $obj.UsedBy
                     Seen = [DateTime]::Parse($obj.Seen).ToUniversalTime()
-                    SessionId = $obj.SessionId
-                    SessionName = $obj.SessionName
+                    SessionId = ""
+                    SessionName = ""
                     # TableTimestamp is a DateTimeOffset
                     Modified = $obj.TableTimestamp.DateTime.ToUniversalTime()
                 }
+
+                # Attempt to extract optional properties
+                try {
+                    $usage["SessionName"] = $obj.SessionName
+                    $usage["SessionId"] = $obj.SessionId
+                } catch {
+                    # Object is missing some of the optional properties
+                    # Fail silently on this
+                }
+
+                [PSCustomObject]$usage
             } catch {
                 Write-Warning ("Could not transform data for entry: " + $_)
                 Write-Warning ("Entry: " + ($obj | ConvertTo-Json))
@@ -396,7 +403,12 @@ Function Remove-CertCheckStorStaleUsage
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        $Table
+        $Table,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern("^[0-9a-zA-Z_-]+$")]
+        [string]$UsageType = ""
     )
 
     process
@@ -411,11 +423,17 @@ Function Remove-CertCheckStorStaleUsage
             Table = $Table
         }
 
+        # Retrieve a particular usage type, if specified
+        if (![string]::IsNullOrEmpty($UsageType))
+        {
+            $tableArgs["PartitionKey"] = $UsageType
+        }
+
         # Retrieve the objects
         $removeCount = 0
-        $result = Get-AzTableRow @tableArgs | Where-Object {
+        Get-AzTableRow @tableArgs | Where-Object {
             $_.SessionName -eq $script:SessionName -and $_.SessionId -ne $script:SessionId
-        } | ForEach-Object { $removeCount++ } | Remove-AzTableRow
+        } | ForEach-Object { $removeCount++ } | Remove-AzTableRow | Out-Null
     }
 }
 
