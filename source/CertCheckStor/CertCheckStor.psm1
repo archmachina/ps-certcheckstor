@@ -435,11 +435,14 @@ Function Remove-CertCheckStorStaleUsage
             try {
                 if ($_.SessionName -eq $script:SessionName -and $_.SessionId -ne $script:SessionId)
                 {
-                    $removeCount++
                     $_
                 }
             } catch {}
-        } | Remove-AzTableRow | Out-Null
+        } | ForEach-Object {
+            $removeCount++
+            $_ | Remove-AzTableRow | Out-Null
+            $_
+        }
     }
 }
 
